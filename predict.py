@@ -462,7 +462,9 @@ class Predictor(BasePredictor):
         if not os.path.exists(f"assets/weights/{exp_dir}.pth"):
             log = f"logs/{exp_dir}/train.log"
             tail = open(log).read()[-2000:] if os.path.exists(log) else ""
-            raise RuntimeError("Training finished without producing the voice model. " + tail)
+            raise RuntimeError(
+                "Training finished without producing the voice model. " + tail
+            )
         print(f"Copying file: assets/weights/{exp_dir}.pth")
         shutil.copy(f"assets/weights/{exp_dir}.pth", f"./Model/{exp_dir}")
 
