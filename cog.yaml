@@ -41,9 +41,13 @@ build:
     - pip install praat-parselmouth==0.4.3 torchcrepe==0.0.20
     - pip install av==11.0.0 || pip install "av<13"
     - pip install --no-build-isolation pyworld==0.3.4 || pip install --no-build-isolation pyworld==0.3.2
-    # fairseq 0.12.2 does not compile with Cython 3 — use Cython 0.29 for it
-    - pip install "Cython==0.29.36" && pip install --no-build-isolation fairseq==0.12.2
-    - pip install numpy==1.23.5 && python -c "import torch, fairseq, pyworld, parselmouth, faiss, librosa, av; print('libs ok', torch.__version__)"
+    # fairseq 0.12.2: compiled with Cython 0.29 and an explicit GPU list (the
+    # build machine has no GPU, which breaks its CUDA parts). If it still can't
+    # compile, its Python code is installed as-is — loading the voice encoder
+    # (HuBERT) for training doesn't use the compiled parts.
+    - pip install "Cython==0.29.36" "hydra-core>=1.0.7,<1.1" "omegaconf<2.1" bitarray sacrebleu regex cffi
+    - TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9+PTX" FORCE_CUDA=0 pip install --no-build-isolation --no-deps fairseq==0.12.2 || (pip download fairseq==0.12.2 --no-deps --no-binary=fairseq -d /tmp/fs && tar xzf /tmp/fs/fairseq-0.12.2.tar.gz -C /tmp/fs && cp -r /tmp/fs/fairseq-0.12.2/fairseq "$(python -c 'import site; print(site.getsitepackages()[0])')/" && rm -rf /tmp/fs)
+    - pip install numpy==1.23.5 && python -c "import torch, fairseq, pyworld, parselmouth, faiss, librosa, av; from fairseq import checkpoint_utils; print('libs ok', torch.__version__)"
     - mkdir -p /rvc-weights
     - curl -fL --retry 5 -o /rvc-weights/f0G48k.pth https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0G48k.pth
     - curl -fL --retry 5 -o /rvc-weights/f0D48k.pth https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0D48k.pth
