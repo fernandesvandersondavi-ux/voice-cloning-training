@@ -14,7 +14,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
     steps:
       - name: Free disk space (the image is large)
         uses: jlumbroso/free-disk-space@v1.3.1
