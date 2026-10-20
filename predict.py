@@ -18,112 +18,24 @@ import shutil
 import glob
 from zipfile import ZipFile
 
-# List of URLs and destinations
-downloads = [
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/D32k.pth",
-        "assets/pretrained/D32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/D40k.pth",
-        "assets/pretrained/D40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/D48k.pth",
-        "assets/pretrained/D48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/G32k.pth",
-        "assets/pretrained/G32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/G40k.pth",
-        "assets/pretrained/G40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/G48k.pth",
-        "assets/pretrained/G48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/f0D32k.pth",
-        "assets/pretrained/f0D32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/f0D40k.pth",
-        "assets/pretrained/f0D40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/f0D48k.pth",
-        "assets/pretrained/f0D48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/f0G32k.pth",
-        "assets/pretrained/f0G32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/f0G40k.pth",
-        "assets/pretrained/f0G40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained/f0G48k.pth",
-        "assets/pretrained/f0G48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/D32k.pth",
-        "assets/pretrained_v2/D32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/D40k.pth",
-        "assets/pretrained_v2/D40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/D48k.pth",
-        "assets/pretrained_v2/D48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/G32k.pth",
-        "assets/pretrained_v2/G32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/G40k.pth",
-        "assets/pretrained_v2/G40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/G48k.pth",
-        "assets/pretrained_v2/G48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/f0D32k.pth",
-        "assets/pretrained_v2/f0D32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/f0D40k.pth",
-        "assets/pretrained_v2/f0D40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/f0D48k.pth",
-        "assets/pretrained_v2/f0D48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/f0G32k.pth",
-        "assets/pretrained_v2/f0G32k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/f0G40k.pth",
-        "assets/pretrained_v2/f0G40k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/pretrained_v2/f0G48k.pth",
-        "assets/pretrained_v2/f0G48k.pth",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/hubert/hubert_base.pt",
-        "assets/hubert/hubert_base.pt",
-    ),
-    (
-        "https://weights.replicate.delivery/default/rvc/assets/rmvpe/rmvpe.pt",
-        "assets/rmvpe/rmvpe.pt",
-    ),
+import traceback
+import urllib.request
+from multiprocessing import cpu_count
+from sklearn.cluster import MiniBatchKMeans
+
+N_CPU = cpu_count()
+
+# Base weights. They are baked into the image at build time (/rvc-weights, see
+# cog.yaml), so setup never depends on an outside download. If they are ever
+# missing, they are fetched once from Hugging Face as a fallback.
+HF = "https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main"
+WEIGHTS = [
+    ("f0G48k.pth", "assets/pretrained_v2/f0G48k.pth", f"{HF}/pretrained_v2/f0G48k.pth"),
+    ("f0D48k.pth", "assets/pretrained_v2/f0D48k.pth", f"{HF}/pretrained_v2/f0D48k.pth"),
+    ("f0G40k.pth", "assets/pretrained_v2/f0G40k.pth", f"{HF}/pretrained_v2/f0G40k.pth"),
+    ("f0D40k.pth", "assets/pretrained_v2/f0D40k.pth", f"{HF}/pretrained_v2/f0D40k.pth"),
+    ("hubert_base.pt", "assets/hubert/hubert_base.pt", f"{HF}/hubert_base.pt"),
+    ("rmvpe.pt", "assets/rmvpe/rmvpe.pt", f"{HF}/rmvpe.pt"),
 ]
 
 
@@ -147,15 +59,10 @@ def infer_folder_name(base_path):
 
 
 def execute_command(command):
-    process = subprocess.Popen(command, shell=True)
-    output, error = process.communicate()
-
+    print(command)
+    process = subprocess.run(command, shell=True)
     if process.returncode != 0:
-        print(f"Error occurred: {error}")
-    else:
-        print(f"Output: {output}")
-
-    return output, error
+        raise RuntimeError(f"Step failed (exit code {process.returncode}): {command}")
 
 
 def train_index(exp_dir1, version19):
@@ -191,7 +98,7 @@ def train_index(exp_dir1, version19):
                 MiniBatchKMeans(
                     n_clusters=10000,
                     verbose=True,
-                    batch_size=256 * config.n_cpu,
+                    batch_size=256 * N_CPU,
                     compute_labels=False,
                     init="random",
                 )
@@ -200,7 +107,7 @@ def train_index(exp_dir1, version19):
             )
         except:
             info = traceback.format_exc()
-            logger.info(info)
+            print(info)
             infos.append(info)
             yield "\n".join(infos)
 
@@ -383,33 +290,28 @@ def click_train(
     return "Training completed. You can check the training log in the console or the 'train.log' file in the experiment directory."
 
 
-def download_weights(url, dest):
-    # Check if the destination directory exists, if not, create it
-    dest_dir = os.path.dirname(dest)
-    os.makedirs(dest_dir, exist_ok=True)
-
-    # Check if the destination file already exists
-    if not os.path.exists(dest):
-        start = time.time()
-        print("Downloading URL: ", url)
-        print("Downloading to: ", dest)
-        subprocess.check_call(["pget", url, dest], close_fds=False)
-        print("Downloading took: ", time.time() - start)
-    else:
-        print(f"File already exists: {dest}")
+def place_weight(name, dest, url):
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    if os.path.exists(dest) and os.path.getsize(dest) > 1000:
+        return
+    baked = os.path.join("/rvc-weights", name)
+    if os.path.exists(baked):
+        if os.path.lexists(dest):
+            os.remove(dest)
+        os.symlink(baked, dest)
+        return
+    print("Downloading", url)
+    tmp = dest + ".part"
+    urllib.request.urlretrieve(url, tmp)
+    os.replace(tmp, dest)
 
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
-        # Running the downloads in parallel
-        with ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(download_weights, url, dest) for url, dest in downloads
-            ]
-
-        # Ensure all downloads are complete before proceeding
-        for future in futures:
-            future.result()
+        for name, dest, url in WEIGHTS:
+            place_weight(name, dest, url)
+        os.makedirs("assets/weights", exist_ok=True)
+        print("Voice trainer ready.")
 
     def delete_old_files(self):
         os.makedirs("assets/weights", exist_ok=True)
@@ -459,6 +361,8 @@ class Predictor(BasePredictor):
         epoch: int = Input(description="Epoch", default=10),
         batch_size: str = Input(description="Batch size", default="7"),
     ) -> CogPath:
+        if version != "v2":
+            raise ValueError("Only RVC v2 is supported by this trainer.")
         self.delete_old_files()
 
         dataset_path = str(dataset_zip)
@@ -555,6 +459,10 @@ class Predictor(BasePredictor):
             print(f"Copying file: {file}")
             shutil.copy(file, f"./Model/{exp_dir}")
 
+        if not os.path.exists(f"assets/weights/{exp_dir}.pth"):
+            log = f"logs/{exp_dir}/train.log"
+            tail = open(log).read()[-2000:] if os.path.exists(log) else ""
+            raise RuntimeError("Training finished without producing the voice model. " + tail)
         print(f"Copying file: assets/weights/{exp_dir}.pth")
         shutil.copy(f"assets/weights/{exp_dir}.pth", f"./Model/{exp_dir}")
 
