@@ -1,0 +1,38 @@
+# Builds the voice trainer and publishes it to Replicate.
+# Run it from the "Actions" tab → "Publish voice trainer to Replicate" → Run workflow.
+# Needs one repository secret: REPLICATE_API_TOKEN (your Replicate API token).
+name: Publish voice trainer to Replicate
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Replicate model to publish to (your-username/model-name)"
+        required: true
+        default: "fernandesvandersondavi-ux/voice-trainer"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Free disk space (the image is large)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - uses: actions/checkout@v4
+
+      - name: Install Cog
+        uses: replicate/setup-cog@v2
+        with:
+          token: ${{ secrets.REPLICATE_API_TOKEN }}
+
+      - name: Build and push to Replicate
+        run: cog push "r8.im/${{ inputs.model }}"
