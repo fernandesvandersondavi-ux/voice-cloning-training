@@ -9,7 +9,8 @@
 #    from Hugging Face while the image is BUILT, so starting the model never
 #    depends on an outside download (the old weights.replicate.delivery links
 #    are gone — that is what broke the original's setup)
-#  - fairseq installed with an older pip (new pip rejects its metadata)
+#  - fairseq / pyworld compiled after numpy, Cython and torch are installed
+#    (Cog's dependency stage has no compiler) and with an older pip
 #  - unused web-UI packages (gradio, fastapi, onnxruntime…) removed
 build:
   gpu: true
@@ -20,6 +21,7 @@ build:
     - "libgl1"
     - "libglib2.0-0"
     - "curl"
+    - "build-essential"
   python_packages:
     - "torch==2.1.1"
     - "torchaudio==2.1.1"
@@ -36,7 +38,6 @@ build:
     - "joblib==1.3.2"
     - "Cython==3.0.6"
     - "praat-parselmouth==0.4.3"
-    - "pyworld==0.3.4"
     - "torchcrepe==0.0.20"
     - "tensorboard==2.15.1"
     - "tensorboardX==2.6.2.2"
@@ -49,7 +50,12 @@ build:
     - "json5==0.9.14"
     - "PyYAML==6.0.1"
   run:
-    - pip install "pip<24.1" && pip install fairseq==0.12.2 && pip install numpy==1.23.5
+    # Libraries without ready-made Python 3.9 packages are compiled here, where
+    # numpy, Cython and torch are already installed (no build isolation).
+    - pip install "pip<24.1" "setuptools<70" wheel
+    - pip install --no-build-isolation pyworld==0.3.4 || pip install --no-build-isolation pyworld==0.3.2
+    - pip install --no-build-isolation fairseq==0.12.2
+    - pip install numpy==1.23.5
     - mkdir -p /rvc-weights
     - curl -fL --retry 5 -o /rvc-weights/f0G48k.pth https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0G48k.pth
     - curl -fL --retry 5 -o /rvc-weights/f0D48k.pth https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0D48k.pth
