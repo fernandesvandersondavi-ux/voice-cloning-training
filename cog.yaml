@@ -41,7 +41,8 @@ build:
     - pip install praat-parselmouth==0.4.3 torchcrepe==0.0.20
     - pip install av==11.0.0 || pip install "av<13"
     - pip install --no-build-isolation pyworld==0.3.4 || pip install --no-build-isolation pyworld==0.3.2
-    - pip install --no-build-isolation fairseq==0.12.2
+    # fairseq 0.12.2 does not compile with Cython 3 — use Cython 0.29 for it
+    - pip install "Cython==0.29.36" && pip install --no-build-isolation fairseq==0.12.2
     - pip install numpy==1.23.5 && python -c "import torch, fairseq, pyworld, parselmouth, faiss, librosa, av; print('libs ok', torch.__version__)"
     - mkdir -p /rvc-weights
     - curl -fL --retry 5 -o /rvc-weights/f0G48k.pth https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0G48k.pth
